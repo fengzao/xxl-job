@@ -14,7 +14,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.*;
 
 /**
@@ -39,17 +42,20 @@ public class WeixinJobAlarm implements JobAlarm {
             if (webhookUrl == null) {
                 return true;
             }
+            final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
             final String content = """
                     Scheduler Alarm : Executor Handler =  %s
                     
                     JobId : %s
                     JobDesc : %s
                     JobLogId: %s
-                    TriggerMsg : %s
+                    TriggerTime : %s
                     HandleCode : %s
                     
                     """.formatted(info.getExecutorHandler(),
-                    info.getId(), info.getJobDesc(), jobLog.getId(), jobLog.getTriggerMsg(), jobLog.getHandleMsg());
+                    info.getId(), info.getJobDesc(), jobLog.getId(),
+                    jobLog.getTriggerTime() == null ? null : format.format(jobLog.getTriggerTime()),
+                    jobLog.getHandleMsg());
             final String body = """
                       {
                         "msgtype":"text",
@@ -75,6 +81,16 @@ public class WeixinJobAlarm implements JobAlarm {
         }
         return true;
     }
+
+//    public static void main(String [] args){
+//        WeixinJobAlarm weixinJobAlarm= new WeixinJobAlarm();
+//        XxlJobInfo info = new XxlJobInfo();
+//        info.setAuthor("wuming");
+//        XxlJobLog jobLog = new XxlJobLog();
+//        jobLog.setTriggerTime(new Date());
+//        info.setAlarmEmail("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=");
+//        weixinJobAlarm.doAlarm(info, jobLog);
+//    }
 
 }
 
