@@ -82,8 +82,7 @@ public class XxlJobAdminConfig implements InitializingBean, DisposableBean {
     private XxlJobGroupMapper xxlJobGroupMapper;
     @Resource
     private XxlJobLogReportMapper xxlJobLogReportMapper;
-    @Resource
-    private JavaMailSender mailSender;
+
     @Resource
     private DataSource dataSource;
     @Resource
@@ -150,9 +149,9 @@ public class XxlJobAdminConfig implements InitializingBean, DisposableBean {
         return xxlJobLogReportMapper;
     }
 
-    public JavaMailSender getMailSender() {
-        return mailSender;
-    }
+//    public JavaMailSender getMailSender() {
+//        return mailSender;
+//    }
 
     public DataSource getDataSource() {
         return dataSource;

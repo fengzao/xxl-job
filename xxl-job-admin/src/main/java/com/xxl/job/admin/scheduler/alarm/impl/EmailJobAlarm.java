@@ -7,9 +7,12 @@ import com.xxl.job.admin.model.XxlJobInfo;
 import com.xxl.job.admin.model.XxlJobLog;
 import com.xxl.job.admin.util.I18nUtil;
 import com.xxl.job.core.biz.model.ReturnT;
+import jakarta.annotation.Resource;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +20,8 @@ import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * job alarm by email
@@ -25,8 +30,12 @@ import java.util.Set;
  */
 @Component
 public class EmailJobAlarm implements JobAlarm {
-    private static Logger logger = LoggerFactory.getLogger(EmailJobAlarm.class);
+    private static final Logger logger = LoggerFactory.getLogger(EmailJobAlarm.class);
+    // simple email check pattern
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
+    @Autowired(required = false)
+    private JavaMailSender mailSender;
     /**
      * fail alarm
      *
@@ -34,6 +43,11 @@ public class EmailJobAlarm implements JobAlarm {
      */
     @Override
     public boolean doAlarm(XxlJobInfo info, XxlJobLog jobLog){
+        if(mailSender == null){
+            logger.warn("Email Job Alarm : just skip alarm msg due to no send mail config !");
+            return true;
+        }
+
         boolean alarmResult = true;
 
         // send monitor email
@@ -58,12 +72,14 @@ public class EmailJobAlarm implements JobAlarm {
                     info.getJobDesc(),
                     alarmContent);
 
-            Set<String> emailSet = new HashSet<String>(Arrays.asList(info.getAlarmEmail().split(",")));
+            Set<String> emailSet = new HashSet<String>(Arrays.asList(info.getAlarmEmail().split(","))).stream()
+                    .filter(mail -> EMAIL_PATTERN.matcher(mail).matches())
+                    .collect(Collectors.toSet());
             for (String email: emailSet) {
 
                 // make mail
                 try {
-                    MimeMessage mimeMessage = XxlJobAdminConfig.getAdminConfig().getMailSender().createMimeMessage();
+                    MimeMessage mimeMessage = mailSender.createMimeMessage();
 
                     MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
                     helper.setFrom(XxlJobAdminConfig.getAdminConfig().getEmailFrom(), personal);
@@ -71,7 +87,7 @@ public class EmailJobAlarm implements JobAlarm {
                     helper.setSubject(title);
                     helper.setText(content, true);
 
-                    XxlJobAdminConfig.getAdminConfig().getMailSender().send(mimeMessage);
+                    mailSender.send(mimeMessage);
                 } catch (Exception e) {
                     logger.error(">>>>>>>>>>> xxl-job, job fail alarm email send error, JobLogId:{}", jobLog.getId(), e);
 
